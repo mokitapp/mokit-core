@@ -50,4 +50,15 @@ We welcome contributions! Please review our [Development Guide](docs/DEVELOPMENT
 
 ---
 
-Built with care for the developer community.
+## Contributors
+
+<a href="https://github.com/aligoren">
+  <img src="https://github.com/aligoren.png" width="60" height="60" style="border-radius: 50%;" alt="aligoren">
+</a>
+<a href="https://github.com/hyusufyavuz">
+  <img src="https://github.com/hyusufyavuz.png" width="60" height="60" style="border-radius: 50%;" alt="hyusufyavuz">
+</a>
+
+---
+
+Built with ❤️ for the developer community.
