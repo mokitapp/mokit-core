@@ -1,0 +1,313 @@
+@page "/import-export"
+@rendermode InteractiveServer
+@using Mokit.Application.Interfaces
+@using Mokit.Application.DTOs.Project
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>Import Collections - Mokit</PageTitle>
+
+@* Click-outside detection handled via JavaScript *@
+
+<div class="page-header">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="/" class="btn btn-sm btn-outline">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"/>
+                    <polyline points="12 19 5 12 12 5"/>
+                </svg>
+            </a>
+            <h1 class="page-title">Import Collections</h1>
+        </div>
+        <p class="text-muted mt-1">Import Postman collections or OpenAPI specifications</p>
+    </div>
+</div>
+
+
+
+<div class="import-container">
+    <!-- Left Panel - Upload & Configuration -->
+    <div class="import-panel">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    Upload Collection
+                </h3>
+            </div>
+            <div class="card-body">
+                <!-- File Upload Area -->
+                <div class="file-upload-area @(isDragging ? "dragging" : "") @(selectedFile != null ? "has-file" : "")"
+                     @ondragenter="HandleDragEnter"
+                     @ondragleave="HandleDragLeave"
+                     @ondragover:preventDefault="true"
+                     @ondrop="HandleDrop"
+                     @ondrop:preventDefault="true">
+                    <InputFile OnChange="OnFileSelected" accept=".json,.yaml,.yml" class="file-input" />
+                    <div class="file-upload-content">
+                        @if (selectedFile != null)
+                        {
+                            <div class="file-selected">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--success-color)" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <path d="M9 15l2 2 4-4"/>
+                                </svg>
+                                <p class="file-name">@selectedFile.Name</p>
+                                <p class="file-size">@FormatFileSize(selectedFile.Size)</p>
+                                <button class="btn btn-sm btn-outline mt-2" @onclick="ClearFile" @onclick:stopPropagation="true">
+                                    Change File
+                                </button>
+                            </div>
+                        }
+                        else
+                        {
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="upload-icon">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                            <p class="upload-text">Drag and drop your file here</p>
+                            <p class="upload-hint">or click to browse</p>
+                            <div class="supported-formats">
+                                <span class="format-badge">JSON</span>
+                                <span class="format-badge">YAML</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Configuration -->
+                <div class="config-section">
+                    <div class="config-row">
+                        <div class="config-item @(formatDropdownOpen ? "dropdown-active" : "")" style="z-index: @(formatDropdownOpen ? 100 : 2)">
+                            <label class="config-label">
+                                Import Format
+                                @if (formatAutoDetected)
+                                {
+                                    <span class="auto-detected-badge">Auto-detected</span>
+                                }
+                            </label>
+                            <div class="custom-dropdown @(formatDropdownOpen ? "open" : "")">
+                                <div class="custom-dropdown-toggle" @onclick="ToggleFormatDropdown">
+                                    <span>@GetFormatDisplayName(importFormat)</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="dropdown-arrow">
+                                        <polyline points="6 9 12 15 18 9"/>
+                                    </svg>
+                                </div>
+                                @if (formatDropdownOpen)
+                                {
+                                    <div class="dropdown-backdrop" @onclick="CloseDropdowns"></div>
+                                    <div class="custom-dropdown-menu">
+                                        <div class="custom-dropdown-item @(importFormat == "postman" ? "active" : "")" @onclick='() => SelectFormat("postman")'>Postman Collection (v2.1)</div>
+                                        <div class="custom-dropdown-item @(importFormat == "openapi-json" ? "active" : "")" @onclick='() => SelectFormat("openapi-json")'>OpenAPI Specification (JSON)</div>
+                                        <div class="custom-dropdown-item @(importFormat == "openapi-yaml" ? "active" : "")" @onclick='() => SelectFormat("openapi-yaml")'>OpenAPI Specification (YAML)</div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="config-item" style="z-index: @(projectDropdownOpen ? 100 : 1)">
+                            <label class="config-label">Target Project</label>
+                            <div class="custom-dropdown @(projectDropdownOpen ? "open" : "")">
+                                <div class="custom-dropdown-toggle" @onclick="ToggleProjectDropdown">
+                                    <span>@(string.IsNullOrEmpty(selectedProjectId) ? "Select a project..." : GetProjectName(selectedProjectId))</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="dropdown-arrow">
+                                        <polyline points="6 9 12 15 18 9"/>
+                                    </svg>
+                                </div>
+                                @if (projectDropdownOpen)
+                                {
+                                    <div class="dropdown-backdrop" @onclick="CloseDropdowns"></div>
+                                    <div class="custom-dropdown-menu">
+                                        @foreach (var project in userProjects)
+                                        {
+                                            <div class="custom-dropdown-item @(selectedProjectId == project.Id.ToString() ? "active" : "")" @onclick="() => SelectProject(project.Id.ToString())">@project.Name</div>
+                                        }
+                                        @if (!userProjects.Any())
+                                        {
+                                            <div class="custom-dropdown-empty">No projects available</div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="options-section">
+                        <label class="config-label">Import Options</label>
+                        <div class="options-grid">
+                            <label class="option-item">
+                                <input type="checkbox" @bind="importOptions.SkipDuplicates" />
+                                <span class="option-check"></span>
+                                <span class="option-text">Skip duplicates</span>
+                            </label>
+                            <label class="option-item">
+                                <input type="checkbox" @bind="importOptions.CreateExamples" />
+                                <span class="option-check"></span>
+                                <span class="option-text">Create responses</span>
+                            </label>
+                            <label class="option-item">
+                                <input type="checkbox" @bind="importOptions.ImportHeaders" />
+                                <span class="option-check"></span>
+                                <span class="option-text">Import headers</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parse Button -->
+                <button class="btn btn-primary btn-lg btn-full" @onclick="ParseCollection" disabled="@(isProcessing || selectedFile == null)">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner"></span>
+                        <span>Parsing...</span>
+                    }
+                    else
+                    {
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <span>Parse Collection</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel - Preview -->
+    <div class="preview-panel @(parsedData != null ? "has-data" : "")">
+        @if (parsedData == null)
+        {
+            <div class="preview-empty">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                <h3>No Collection Parsed</h3>
+                <p>Upload and parse a collection to see the preview here</p>
+            </div>
+        }
+        else
+        {
+            <div class="preview-content">
+                <div class="preview-header">
+                    <div class="preview-title">
+                        <h3>@parsedData.CollectionName</h3>
+                        @if (!string.IsNullOrEmpty(parsedData.Description))
+                        {
+                            <p class="text-muted">@parsedData.Description</p>
+                        }
+                    </div>
+                    <button class="btn btn-success" @onclick="ImportCollection" disabled="@(isProcessing || string.IsNullOrEmpty(selectedProjectId))">
+                        @if (isProcessing)
+                        {
+                            <span class="spinner"></span>
+                            <span>Importing...</span>
+                        }
+                        else
+                        {
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            <span>Import</span>
+                        }
+                    </button>
+                </div>
+
+                <div class="preview-stats">
+                    <div class="stat-card">
+                        <span class="stat-number">@parsedData.Endpoints.Count</span>
+                        <span class="stat-text">Endpoints</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">@parsedData.Endpoints.Sum(e => e.Responses.Count)</span>
+                        <span class="stat-text">Responses</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">@parsedData.Variables.Count</span>
+                        <span class="stat-text">Variables</span>
+                    </div>
+                </div>
+
+                <div class="endpoints-list">
+                    <div class="endpoints-header">
+                        <h4>Endpoints</h4>
+                        <button class="btn btn-sm btn-ghost" @onclick="ToggleAllEndpoints">
+                            @(expandedEndpoints.Count == parsedData.Endpoints.Count ? "Collapse All" : "Expand All")
+                        </button>
+                    </div>
+                    <div class="endpoints-scroll">
+                        @foreach (var endpoint in parsedData.Endpoints)
+                        {
+                            <div class="endpoint-item @(expandedEndpoints.Contains(endpoint) ? "expanded" : "")">
+                                <div class="endpoint-header" @onclick="() => ToggleEndpoint(endpoint)">
+                                    <span class="method-badge method-@endpoint.Method.ToString().ToLower()">@endpoint.Method</span>
+                                    <span class="endpoint-route">@endpoint.Route</span>
+                                    @if (!string.IsNullOrEmpty(endpoint.Name))
+                                    {
+                                        <span class="endpoint-name">@endpoint.Name</span>
+                                    }
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="chevron">
+                                        <polyline points="6 9 12 15 18 9"/>
+                                    </svg>
+                                </div>
+                                @if (expandedEndpoints.Contains(endpoint))
+                                {
+                                    <div class="endpoint-details">
+                                        @if (!string.IsNullOrEmpty(endpoint.Description))
+                                        {
+                                            <p class="endpoint-description">@endpoint.Description</p>
+                                        }
+                                        @if (endpoint.Headers.Any())
+                                        {
+                                            <div class="detail-section">
+                                                <h5>Headers</h5>
+                                                <div class="headers-grid">
+                                                    @foreach (var header in endpoint.Headers)
+                                                    {
+                                                        <div class="header-row">
+                                                            <code>@header.Key</code>
+                                                            <span>@header.Value</span>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                        @if (endpoint.Responses.Any())
+                                        {
+                                            <div class="detail-section">
+                                                <h5>Responses</h5>
+                                                <div class="responses-grid">
+                                                    @foreach (var response in endpoint.Responses)
+                                                    {
+                                                        <div class="response-row">
+                                                            <span class="status-code status-@GetStatusClass(response.StatusCode)">@response.StatusCode</span>
+                                                            <span class="response-name">@response.Name</span>
+                                                        </div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

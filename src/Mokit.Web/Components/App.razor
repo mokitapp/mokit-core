@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="app.css" />
+    <link rel="stylesheet" href="Mokit.Web.styles.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/editor/editor.main.min.css" />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+
+<body>
+    <Routes @rendermode="InteractiveServer" />
+    <script src="_framework/blazor.web.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+    <script src="js/monaco-interop.js"></script>
+    <script>
+        // Toggle functions - Save to DB and reload page
+        window.toggleSidebar = function() {
+            fetch('/api/account/preferences', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sidebarCollapsed: !document.querySelector('.sidebar-collapsed') })
+            }).then(function() {
+                // Toggle class immediately for visual feedback
+                var wrapper = document.querySelector('.layout-wrapper');
+                var container = document.querySelector('.app-container');
+                if (wrapper) wrapper.classList.toggle('sidebar-collapsed');
+                if (container) container.classList.toggle('sidebar-collapsed');
+            });
+        };
+        
+        window.toggleTheme = function() {
+            var isLight = document.querySelector('.light-theme');
+            var newTheme = isLight ? 'dark' : 'light';
+            
+            fetch('/api/account/preferences', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ theme: newTheme })
+            }).then(function() {
+                // Reload to apply new theme from server
+                window.location.reload();
+            });
+        };
+    </script>
+</body>
+
+</html>

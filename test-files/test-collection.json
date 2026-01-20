@@ -1,0 +1,148 @@
+{
+    "info": {
+        "name": "Sample API Collection",
+        "description": "A sample Postman collection for testing import functionality",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Get Users",
+            "request": {
+                "method": "GET",
+                "header": [
+                    {
+                        "key": "Accept",
+                        "value": "application/json"
+                    }
+                ],
+                "url": {
+                    "raw": "{{base_url}}/api/users",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "users"]
+                },
+                "description": "Retrieves a list of all users"
+            },
+            "response": [
+                {
+                    "name": "Success Response",
+                    "code": 200,
+                    "status": "OK",
+                    "header": [
+                        {
+                            "key": "Content-Type",
+                            "value": "application/json"
+                        }
+                    ],
+                    "body": "[{\"id\": 1, \"name\": \"John Doe\", \"email\": \"john@example.com\"}]"
+                }
+            ]
+        },
+        {
+            "name": "Get User by ID",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/users/:id",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "users", ":id"]
+                },
+                "description": "Retrieves a specific user by ID"
+            },
+            "response": [
+                {
+                    "name": "User Found",
+                    "code": 200,
+                    "status": "OK",
+                    "body": "{\"id\": 1, \"name\": \"John Doe\", \"email\": \"john@example.com\"}"
+                },
+                {
+                    "name": "User Not Found",
+                    "code": 404,
+                    "status": "Not Found",
+                    "body": "{\"error\": \"User not found\"}"
+                }
+            ]
+        },
+        {
+            "name": "Create User",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\"name\": \"Jane Doe\", \"email\": \"jane@example.com\"}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/users",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "users"]
+                },
+                "description": "Creates a new user"
+            },
+            "response": [
+                {
+                    "name": "Created",
+                    "code": 201,
+                    "status": "Created",
+                    "body": "{\"id\": 2, \"name\": \"Jane Doe\", \"email\": \"jane@example.com\"}"
+                }
+            ]
+        },
+        {
+            "name": "Update User",
+            "request": {
+                "method": "PUT",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\"name\": \"Jane Smith\"}"
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/users/:id",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "users", ":id"]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Delete User",
+            "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/users/:id",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "users", ":id"]
+                }
+            },
+            "response": [
+                {
+                    "name": "Deleted",
+                    "code": 204,
+                    "status": "No Content",
+                    "body": ""
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:3000",
+            "type": "string"
+        }
+    ]
+}
+

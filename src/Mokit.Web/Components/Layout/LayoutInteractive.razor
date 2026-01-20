@@ -1,0 +1,21 @@
+@rendermode InteractiveServer
+@inject IJSRuntime JS
+
+@ChildContent
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            // Call JS to apply saved state after every render
+            await JS.InvokeVoidAsync("initializeLayoutFromBlazor");
+        }
+        catch
+        {
+            // JS not available yet
+        }
+    }
+}

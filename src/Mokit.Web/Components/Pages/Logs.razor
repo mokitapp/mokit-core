@@ -1,0 +1,308 @@
+@page "/logs"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.SignalR.Client
+@using Mokit.Application.Common
+@using Mokit.Application.Interfaces
+@using Mokit.Web.Hubs
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@using System.Text.Json
+@attribute [Authorize]
+@implements IAsyncDisposable
+
+<PageTitle>Request Logs - Mokit</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Request Logs</h1>
+        <p class="page-description">Monitor real-time request logs · @totalLogCount logs</p>
+    </div>
+    <div class="flex gap-2">
+        <select class="form-control" style="width: 200px;" @onchange="OnProjectChanged">
+            <option value="">All Projects</option>
+            @foreach (var project in projects)
+            {
+                <option value="@project.Id" selected="@(selectedProjectId == project.Id)">@project.Name</option>
+            }
+        </select>
+        <button class="btn btn-outline" @onclick="RefreshLogs" title="Refresh">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 4 23 10 17 10"/>
+                <polyline points="1 20 1 14 7 14"/>
+                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+            </svg>
+        </button>
+        @if (isAdmin && selectedProjectId.HasValue)
+        {
+            <button class="btn btn-danger" @onclick="PromptDeleteProjectLogs">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+                Delete Project Logs
+            </button>
+        }
+        @if (isAdmin && !selectedProjectId.HasValue)
+        {
+            <button class="btn btn-danger" @onclick="PromptDeleteAllLogs">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+                Delete All Logs
+            </button>
+        }
+    </div>
+</div>
+
+<div class="card">
+    @if (loading)
+    {
+        <div class="flex items-center justify-center" style="padding: 3rem;">
+            <div class="spinner"></div>
+        </div>
+    }
+    else if (logs.Count == 0)
+    {
+        <div class="empty-state" style="padding: 2rem;">
+            <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <div class="empty-state-title">No logs yet</div>
+            <p class="text-muted">Logs will appear here when requests are made to your Mock APIs</p>
+        </div>
+    }
+    else
+    {
+        <div style="max-height: 600px; overflow-y: auto;">
+            <table class="table">
+                <thead style="position: sticky; top: 0; background: var(--card-bg); z-index: 1;">
+                    <tr>
+                        <th style="width: 140px;">Time</th>
+                        <th style="width: 70px;">Method</th>
+                        <th>Path</th>
+                        <th style="width: 80px;">Status</th>
+                        <th style="width: 80px;">Duration</th>
+                        <th style="width: 140px;">Project</th>
+                        <th style="width: 80px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in logs)
+                    {
+                        <tr class="log-row @(log.ResponseStatusCode >= 400 ? "error-row" : "")" @onclick="() => ShowLogDetail(log)">
+                            <td class="text-muted text-sm">@log.CreatedAt.ToString("dd.MM HH:mm:ss")</td>
+                            <td>
+                                <span class="method-badge method-@log.Method.ToLower()">@log.Method</span>
+                            </td>
+                            <td>
+                                <code style="font-size: 0.8125rem;">@log.Path@log.QueryString</code>
+                                @if (!log.IsMatched)
+                                {
+                                    <span class="badge badge-warning" style="margin-left: 0.5rem;">Not Matched</span>
+                                }
+                            </td>
+                            <td>
+                                <span class="@GetStatusBadgeClass(log.ResponseStatusCode)">@log.ResponseStatusCode</span>
+                            </td>
+                            <td class="text-muted text-sm">@log.DurationMs ms</td>
+                            <td class="text-muted text-sm text-truncate" style="max-width: 140px;" title="@log.ProjectName">
+                                @log.ProjectName
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline" @onclick:stopPropagation="true" @onclick="() => ShowLogDetail(log)">
+                                    Details
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        
+        @if (hasMoreLogs)
+        {
+            <div class="flex justify-center" style="padding: 1rem; border-top: 1px solid var(--border-color);">
+                <button class="btn btn-outline" @onclick="LoadMoreLogs">
+                    Load More
+                </button>
+            </div>
+        }
+    }
+</div>
+
+<!-- Log Detail Modal -->
+@if (showDetailModal && selectedLog != null)
+{
+    <div class="modal-backdrop" @onclick="CloseDetailModal">
+        <div class="modal modal-lg" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <div class="flex items-center gap-3">
+                    <span class="method-badge method-@selectedLog.Method.ToLower()">@selectedLog.Method</span>
+                    <h3 class="modal-title" style="margin: 0;">@selectedLog.Path</h3>
+                    <span class="@GetStatusBadgeClass(selectedLog.ResponseStatusCode)">@selectedLog.ResponseStatusCode</span>
+                </div>
+                <button class="modal-close" @onclick="CloseDetailModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- Summary -->
+                <div class="log-detail-summary">
+                    <div class="summary-item">
+                        <span class="summary-label">Time</span>
+                        <span class="summary-value">@selectedLog.CreatedAt.ToString("dd.MM.yyyy HH:mm:ss")</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Project</span>
+                        <span class="summary-value">@selectedLog.ProjectName</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Duration</span>
+                        <span class="summary-value">@selectedLog.DurationMs ms</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">IP</span>
+                        <span class="summary-value">@(selectedLog.ClientIp ?? "-")</span>
+                    </div>
+                    @if (selectedLog.IsMatched && !string.IsNullOrEmpty(selectedLog.MatchedRoute))
+                    {
+                        <div class="summary-item">
+                            <span class="summary-label">Matched Route</span>
+                            <span class="summary-value"><code>@selectedLog.MatchedRoute</code></span>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(selectedLog.EndpointName))
+                    {
+                        <div class="summary-item">
+                            <span class="summary-label">Endpoint</span>
+                            <span class="summary-value">@selectedLog.EndpointName</span>
+                        </div>
+                    }
+                </div>
+
+                <!-- Tabs -->
+                <div class="log-detail-tabs">
+                    <button class="tab-btn @(detailTab == "request" ? "active" : "")" @onclick="SetDetailTabRequest">
+                        Request
+                    </button>
+                    <button class="tab-btn @(detailTab == "response" ? "active" : "")" @onclick="SetDetailTabResponse">
+                        Response
+                    </button>
+                    <button class="tab-btn @(detailTab == "headers" ? "active" : "")" @onclick="SetDetailTabHeaders">
+                        Headers
+                    </button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="log-detail-content">
+                    @if (detailTab == "request")
+                    {
+                        <div class="detail-section">
+                            <h4>URL</h4>
+                            <code class="detail-code">@selectedLog.Path@selectedLog.QueryString</code>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(selectedLog.QueryString))
+                        {
+                            <div class="detail-section">
+                                <h4>Query Parameters</h4>
+                                <pre class="detail-pre">@FormatQueryString(selectedLog.QueryString)</pre>
+                            </div>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(selectedLog.RequestBody))
+                        {
+                            <div class="detail-section">
+                                <h4>Request Body</h4>
+                                <pre class="detail-pre">@FormatJson(selectedLog.RequestBody)</pre>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="detail-section">
+                                <h4>Request Body</h4>
+                                <p class="text-muted">No body</p>
+                            </div>
+                        }
+                    }
+                    else if (detailTab == "response")
+                    {
+                        <div class="detail-section">
+                            <h4>Status Code</h4>
+                            <span class="@GetStatusBadgeClass(selectedLog.ResponseStatusCode)">@selectedLog.ResponseStatusCode</span>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(selectedLog.ResponseBody))
+                        {
+                            <div class="detail-section">
+                                <h4>Response Body</h4>
+                                <pre class="detail-pre">@FormatJson(selectedLog.ResponseBody)</pre>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="detail-section">
+                                <h4>Response Body</h4>
+                                <p class="text-muted">Response body not saved</p>
+                            </div>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(selectedLog.ErrorMessage))
+                        {
+                            <div class="detail-section">
+                                <h4>Error Message</h4>
+                                <pre class="detail-pre error-text">@selectedLog.ErrorMessage</pre>
+                            </div>
+                        }
+                    }
+                    else if (detailTab == "headers")
+                    {
+                        <div class="detail-section">
+                            <h4>Request Headers</h4>
+                            @if (!string.IsNullOrEmpty(selectedLog.RequestHeaders))
+                            {
+                                <pre class="detail-pre">@FormatHeaders(selectedLog.RequestHeaders)</pre>
+                            }
+                            else
+                            {
+                                <p class="text-muted">No headers</p>
+                            }
+                        </div>
+                        
+                        <div class="detail-section">
+                            <h4>Response Headers</h4>
+                            @if (!string.IsNullOrEmpty(selectedLog.ResponseHeaders))
+                            {
+                                <pre class="detail-pre">@FormatHeaders(selectedLog.ResponseHeaders)</pre>
+                            }
+                            else
+                            {
+                                <p class="text-muted">No headers</p>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                @if (canDeleteLog)
+                {
+        <button class="btn btn-danger" @onclick="PromptDeleteSelectedLog">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                        </svg>
+                        Delete
+                    </button>
+                }
+                <button class="btn btn-outline" @onclick="CloseDetailModal">Close</button>
+            </div>
+        </div>
+    </div>
+}
+
+<Mokit.Web.Components.Shared.ConfirmationModal 
+    IsVisible="@showConfirmation" 
+    Title="@confirmationTitle" 
+    Message="@confirmationMessage" 
+    OnConfirm="ExecuteConfirmedAction" 
+    OnCancel="CancelConfirmation" />

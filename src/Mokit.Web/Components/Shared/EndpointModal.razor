@@ -1,0 +1,470 @@
+@using Mokit.Application.DTOs.Project
+@using Mokit.Application.DTOs.Endpoint
+@using Mokit.Domain.Enums
+@using Mokit.Web.Components.Shared
+
+<div class="modal-backdrop" @onclick="OnCancel">
+    <div class="modal modal-large" @onclick:stopPropagation="true">
+        <div class="modal-header">
+            <h3 class="modal-title">@(Endpoint == null ? "New Endpoint" : "Edit Endpoint")</h3>
+            <button class="btn-icon" @onclick="OnCancel">✕</button>
+        </div>
+        <div class="modal-body">
+            <!-- Tabs -->
+            <div class="modal-tabs">
+                <button class="modal-tab @(activeTab == "general" ? "active" : "")" @onclick="SetTabGeneral">
+                    General
+                </button>
+                <button class="modal-tab @(activeTab == "response" ? "active" : "")" @onclick="SetTabResponse">
+                    Response
+                </button>
+                <button class="modal-tab @(activeTab == "headers" ? "active" : "")" @onclick="SetTabHeaders">
+                    Headers
+                </button>
+                <button class="modal-tab @(activeTab == "rules" ? "active" : "")" @onclick="SetTabRules">
+                    Rules
+                </button>
+                <button class="modal-tab @(activeTab == "webhooks" ? "active" : "")" @onclick="SetTabWebhooks">
+                    Webhooks
+                </button>
+                @if (Endpoint != null)
+                {
+                    <button class="modal-tab @(activeTab == "logs" ? "active" : "")" @onclick="SetTabLogs">
+                        Logs
+                        @if (endpointLogs.Count > 0)
+                        {
+                            <span class="tab-badge">@endpointLogs.Count</span>
+                        }
+                    </button>
+                }
+            </div>
+
+            <!-- Tab Content -->
+            <div class="tab-content">
+                @if (activeTab == "general")
+                {
+                    <div class="form-group">
+                        <label class="form-label">Endpoint Name *</label>
+                        <input type="text" class="form-control" @bind="endpointModel.Name" placeholder="Get Users" />
+                    </div>
+                    <div class="grid grid-cols-2" style="gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">HTTP Method *</label>
+                            <select class="form-control" @bind="endpointModel.Method">
+                                @foreach (var method in Enum.GetValues<HttpMethodType>())
+                                {
+                                    <option value="@method">@method</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Route *</label>
+                            <input type="text" class="form-control" @bind="endpointModel.Route" placeholder="/api/users/:id" />
+                            <small class="text-muted">You can use :param or {param}</small>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-control" @bind="endpointModel.Description" placeholder="Endpoint description" />
+                    </div>
+                    <div class="grid grid-cols-2" style="gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Min Delay (ms)</label>
+                            <input type="number" class="form-control" @bind="responseModel.DelayMin" min="0" placeholder="0" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Max Delay (ms)</label>
+                            <input type="number" class="form-control" @bind="responseModel.DelayMax" min="0" placeholder="0" />
+                        </div>
+                    </div>
+                }
+                else if (activeTab == "response")
+                {
+                    <div class="grid grid-cols-2" style="gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Status Code *</label>
+                            <select class="form-control" @bind="responseModel.StatusCode">
+                                <optgroup label="2xx Success">
+                                    <option value="200">200 OK</option>
+                                    <option value="201">201 Created</option>
+                                    <option value="204">204 No Content</option>
+                                </optgroup>
+                                <optgroup label="3xx Redirection">
+                                    <option value="301">301 Moved Permanently</option>
+                                    <option value="302">302 Found</option>
+                                    <option value="304">304 Not Modified</option>
+                                </optgroup>
+                                <optgroup label="4xx Client Error">
+                                    <option value="400">400 Bad Request</option>
+                                    <option value="401">401 Unauthorized</option>
+                                    <option value="403">403 Forbidden</option>
+                                    <option value="404">404 Not Found</option>
+                                    <option value="422">422 Unprocessable Entity</option>
+                                    <option value="429">429 Too Many Requests</option>
+                                </optgroup>
+                                <optgroup label="5xx Server Error">
+                                    <option value="500">500 Internal Server Error</option>
+                                    <option value="502">502 Bad Gateway</option>
+                                    <option value="503">503 Service Unavailable</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Content-Type *</label>
+                            <select class="form-control" @bind="responseModel.ContentType" @bind:after="OnContentTypeChanged">
+                                <option value="application/json">application/json</option>
+                                <option value="application/xml">application/xml</option>
+                                <option value="text/plain">text/plain</option>
+                                <option value="text/html">text/html</option>
+                                <option value="text/javascript">text/javascript</option>
+                                <option value="text/css">text/css</option>
+                                <option value="application/octet-stream">application/octet-stream</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="flex justify-between items-center">
+                            <label class="form-label">Response Body</label>
+                            <div class="flex gap-2">
+                                <button type="button" class="btn btn-xs btn-outline" @onclick="InsertSampleContent">
+                                    Insert Sample
+                                </button>
+                                <button type="button" class="btn btn-xs btn-outline" @onclick="FormatDocument">
+                                    Format
+                                </button>
+                            </div>
+                        </div>
+                        <!-- MonacoEditor might need fully qualified name if not imported -->
+                        <MonacoEditor @ref="monacoEditor" 
+                                      @bind-Value="responseModel.Body" 
+                                      Language="@GetLanguageFromContentType(responseModel.ContentType)" 
+                                      Height="300px" />
+                        <small class="text-muted">
+                            Dynamic variables: <code>@("{{faker.name.fullName}}")</code>, <code>@("{{faker.random.uuid}}")</code>, <code>@("{{request.params.id}}")</code>
+                        </small>
+                    </div>
+                }
+                else if (activeTab == "headers")
+                {
+                    <div class="form-group">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="form-label" style="margin:0;">Response Headers</label>
+                            <button type="button" class="btn btn-xs btn-outline" @onclick="AddHeader">
+                                + Add Header
+                            </button>
+                        </div>
+                        
+                        @if (responseHeaders.Count == 0)
+                        {
+                            <div class="empty-state-sm">
+                                <p class="text-muted text-sm">No custom headers yet</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                @foreach (var header in responseHeaders)
+                                {
+                                    <div class="header-row">
+                                        <input type="text" class="form-control" @bind="header.Key" placeholder="Header name" />
+                                        <input type="text" class="form-control" @bind="header.Value" placeholder="Value" />
+                                        <button type="button" class="btn btn-sm btn-danger" @onclick="() => RemoveHeader(header)">
+                                            ✕
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="info-box">
+                        <strong>Automatically Added Headers:</strong>
+                        <ul>
+                            <li>Content-Type (selected above)</li>
+                            <li>X-Powered-By: Mokit</li>
+                            @* EnableCors check removed or needs to be passed in *@
+                            @if (EnableCors)
+                            {
+                                <li>Access-Control-Allow-Origin: *</li>
+                            }
+                        </ul>
+                    </div>
+                }
+                else if (activeTab == "rules")
+                {
+                    <div class="form-group">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="form-label" style="margin:0;">Validation Rules</label>
+                            <button type="button" class="btn btn-xs btn-outline" @onclick="AddValidationRule">
+                                + Add Rule
+                            </button>
+                        </div>
+                        
+                        <div class="info-box mb-3">
+                            <strong>Tip:</strong> For body parameters, use dot notation for nested properties (e.g., <code>user.address.city</code>) 
+                            and bracket notation for arrays (e.g., <code>items[0].name</code>).
+                        </div>
+                        
+                        @if (validationRules.Count == 0)
+                        {
+                            <div class="empty-state-sm">
+                                <p class="text-muted text-sm">No validation rules yet</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                @foreach (var rule in validationRules)
+                                {
+                                    <div class="rule-card">
+                                        <!-- Row 1: Parameter, Location, Type -->
+                                        <div class="grid grid-cols-3" style="gap: 0.5rem;">
+                                            <div class="form-group" style="margin:0;">
+                                                <label class="form-label text-xs">Parameter Name</label>
+                                                <input type="text" class="form-control form-control-sm" @bind="rule.ParameterName" placeholder="id or user.email" />
+                                            </div>
+                                            <div class="form-group" style="margin:0;">
+                                                <label class="form-label text-xs">Location</label>
+                                                <select class="form-control form-control-sm" @bind="rule.Location">
+                                                    <option value="Query">Query String</option>
+                                                    <option value="Path">URL Path</option>
+                                                    <option value="Header">Header</option>
+                                                    <option value="Body">Body (JSON)</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group" style="margin:0;">
+                                                <label class="form-label text-xs">Data Type</label>
+                                                <select class="form-control form-control-sm" @bind="rule.DataType">
+                                                    <option value="String">String</option>
+                                                    <option value="Number">Number</option>
+                                                    <option value="Boolean">Boolean</option>
+                                                    <option value="Email">Email</option>
+                                                    <option value="Uuid">UUID</option>
+                                                    <option value="Date">Date</option>
+                                                    <option value="Url">URL</option>
+                                                    <option value="Array">Array</option>
+                                                    <option value="Object">Object</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <!-- Row 2: Min, Max, Allowed Values, Status Code -->
+                                        <div class="grid grid-cols-4 mt-2" style="gap: 0.5rem;">
+                                            <div class="form-group" style="margin:0;">
+                                                <label class="form-label text-xs">Min Value / Length</label>
+                                                <input type="text" class="form-control form-control-sm" @bind="rule.MinValue" placeholder="e.g., 0" />
+                                            </div>
+                                            <div class="form-group" style="margin:0;">
+                                                <label class="form-label text-xs">Max Value / Length</label>
+                                                <input type="text" class="form-control form-control-sm" @bind="rule.MaxValue" placeholder="e.g., 100" />
+                                            </div>
+                                            <div class="form-group" style="margin:0;">
+                                                <label class="form-label text-xs">Allowed Values</label>
+                                                <input type="text" class="form-control form-control-sm" @bind="rule.AllowedValues" placeholder="a, b, c" />
+                                            </div>
+                                            <div class="form-group" style="margin:0;">
+                                                <label class="form-label text-xs">Status Code</label>
+                                                <select class="form-control form-control-sm" @bind="rule.StatusCode">
+                                                    <option value="400">400 Bad Request</option>
+                                                    <option value="401">401 Unauthorized</option>
+                                                    <option value="403">403 Forbidden</option>
+                                                    <option value="415">415 Unsupported Media</option>
+                                                    <option value="422">422 Unprocessable</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <!-- Row 3: Regex and Error Message -->
+                                        <div class="grid grid-cols-2 mt-2" style="gap: 0.5rem;">
+                                            <div class="form-group" style="margin:0;">
+                                                <label class="form-label text-xs">Regex Pattern</label>
+                                                <input type="text" class="form-control form-control-sm" @bind="rule.RegexPattern" placeholder="^[A-Z]{2}[0-9]{4}$" />
+                                            </div>
+                                            <div class="form-group" style="margin:0;">
+                                                <label class="form-label text-xs">Custom Error Message</label>
+                                                <input type="text" class="form-control form-control-sm" @bind="rule.ErrorMessage" placeholder="Invalid format" />
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Row 4: Required checkbox and Remove button -->
+                                        <div class="flex items-center justify-between mt-3">
+                                            <label class="flex items-center gap-2" style="cursor: pointer;">
+                                                <input type="checkbox" @bind="rule.IsRequired" />
+                                                <span class="text-sm font-medium">Required</span>
+                                            </label>
+                                            <button type="button" class="btn btn-xs btn-danger" @onclick="() => RemoveValidationRule(rule)">
+                                                Remove Rule
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                    
+                    <!-- Custom Validation Error Response Section -->
+                    <div class="form-group mt-4" style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="form-label" style="margin:0;">Custom Error Response Template</label>
+                            <select class="form-control form-control-sm" style="width: auto;" @onchange="ApplyErrorTemplate">
+                                <option value="">-- Select Example --</option>
+                                <option value="laravel">Laravel Style</option>
+                                <option value="spring">Spring Boot Style</option>
+                                <option value="minimal">Minimal</option>
+                                <option value="detailed">Detailed</option>
+                            </select>
+                        </div>
+                        
+                        <p class="text-muted text-sm mb-2">
+                            Leave empty to use default format. Use placeholders like <code>{{validation.firstMessage}}</code> for dynamic values.
+                        </p>
+                        
+                        <MonacoEditor @ref="errorTemplateEditor" 
+                                      @bind-Value="validationErrorResponseTemplate" 
+                                      Language="json" 
+                                      Height="200px" />
+                        
+                        <div class="info-box mt-2">
+                            <strong>Available Placeholders:</strong>
+                            <ul style="margin: 0.5rem 0 0 1rem; padding: 0; font-size: 0.75rem;">
+                                <li><code>{{validation.errors}}</code> - Full errors as JSON array</li>
+                                <li><code>{{validation.messages}}</code> - Array of error messages only</li>
+                                <li><code>{{validation.firstMessage}}</code> - First error message</li>
+                                <li><code>{{validation.fields}}</code> - Array of field names with errors</li>
+                                <li><code>{{validation.errorCount}}</code> - Number of errors</li>
+                                <li><code>{{timestamp}}</code> - Current timestamp (ISO 8601)</li>
+                            </ul>
+                        </div>
+                    </div>
+                }
+                else if (activeTab == "webhooks")
+                {
+                    <div class="form-group">
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="form-label" style="margin:0;">Webhooks</label>
+                            <button type="button" class="btn btn-xs btn-outline" @onclick="AddWebhook">
+                                + Add Webhook
+                            </button>
+                        </div>
+                        
+                        <div class="info-box mb-3">
+                            <strong>Tip:</strong> Webhooks are fired after the response is sent. You can use Scriban templates in the Body and URL.
+                        </div>
+                        
+                        @if (webhooks.Count == 0)
+                        {
+                            <div class="empty-state-sm">
+                                <p class="text-muted text-sm">No webhooks configured</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                @foreach (var hook in webhooks)
+                                {
+                                    <div class="rule-card">
+                                        <div class="flex justify-between items-start mb-2">
+                                            <div class="flex-1">
+                                                <input type="text" class="form-control form-control-sm mb-1" @bind="hook.Name" placeholder="Webhook Name" style="font-weight: bold;" />
+                                            </div>
+                                            <div class="flex items-center gap-2 ml-2">
+                                                <label class="flex items-center gap-1 text-xs" style="cursor: pointer;">
+                                                    <input type="checkbox" @bind="hook.IsEnabled" /> Enabled
+                                                </label>
+                                                <button type="button" class="btn btn-xs btn-danger" @onclick="() => RemoveWebhook(hook)">✕</button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="grid grid-cols-4 mb-2" style="gap: 0.5rem;">
+                                            <div class="form-group col-span-1" style="margin:0;">
+                                                <label class="form-label text-xs">Method</label>
+                                                <select class="form-control form-control-sm" @bind="hook.Method">
+                                                    @foreach (var method in Enum.GetValues<HttpMethodType>())
+                                                    {
+                                                        <option value="@method">@method</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="form-group col-span-2" style="margin:0;">
+                                                <label class="form-label text-xs">URL</label>
+                                                <input type="text" class="form-control form-control-sm" @bind="hook.Url" placeholder="https://api.example.com/callback" />
+                                            </div>
+                                             <div class="form-group col-span-1" style="margin:0;">
+                                                <label class="form-label text-xs">Delay (ms)</label>
+                                                <input type="number" class="form-control form-control-sm" @bind="hook.DelayMs" placeholder="0" />
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                                            <label class="form-label text-xs">Headers (JSON)</label>
+                                            <input type="text" class="form-control form-control-sm" @bind="hook.Headers" placeholder='{"Content-Type": "application/json"}' />
+                                        </div>
+
+                                        <div class="form-group" style="margin:0;">
+                                            <label class="form-label text-xs">Body Template</label>
+                                            <MonacoEditor @bind-Value="hook.Body" 
+                                                          Language="json" 
+                                                          Height="120px" />
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else if (activeTab == "logs")
+                {
+                    <div class="endpoint-logs-section">
+                        @if (loadingLogs)
+                        {
+                            <div class="flex items-center justify-center" style="padding: 2rem;">
+                                <div class="spinner"></div>
+                            </div>
+                        }
+                        else if (endpointLogs.Count == 0)
+                        {
+                            <div class="empty-state-sm">
+                                <p class="text-muted">No requests to this endpoint yet</p>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="endpoint-logs-list">
+                                @foreach (var log in endpointLogs)
+                                {
+                                    <div class="endpoint-log-item @(log.ResponseStatusCode >= 400 ? "error" : "")">
+                                        <div class="log-item-header">
+                                            <span class="log-time">@log.CreatedAt.ToString("dd.MM HH:mm:ss")</span>
+                                            <span class="badge @GetLogStatusBadgeClass(log.ResponseStatusCode)">@log.ResponseStatusCode</span>
+                                            <span class="log-duration">@log.DurationMs ms</span>
+                                        </div>
+                                        <div class="log-item-path">
+                                            <code>@log.Path@log.QueryString</code>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(log.ClientIp))
+                                        {
+                                            <div class="log-item-meta">
+                                                <span class="text-muted text-xs">IP: @log.ClientIp</span>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <div class="flex justify-center" style="padding-top: 1rem;">
+                                <a href="/logs?endpoint=@Endpoint?.Id" class="btn btn-sm btn-outline">
+                                    View All Logs
+                                </a>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-outline" @onclick="OnCancel">Cancel</button>
+            <button class="btn btn-primary" @onclick="SaveAsync">
+                @(Endpoint == null ? "Create" : "Save")
+            </button>
+        </div>
+    </div>
+</div>

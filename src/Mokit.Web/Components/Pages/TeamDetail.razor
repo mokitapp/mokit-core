@@ -1,0 +1,314 @@
+@page "/teams/{TeamId:guid}"
+@rendermode InteractiveServer
+@using Mokit.Application.Interfaces
+@using Mokit.Application.DTOs.User
+@using Mokit.Application.Constants
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>@(team?.Name ?? "Team") - Mokit</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="/teams" class="btn btn-sm btn-outline">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"/>
+                    <polyline points="12 19 5 12 12 5"/>
+                </svg>
+            </a>
+            <h1 class="page-title">@(team?.Name ?? "Team")</h1>
+        </div>
+        @if (team != null)
+        {
+            <div class="flex items-center gap-2 mt-1">
+                <code class="mock-url">/@team.Slug</code>
+                <span class="text-muted">· @team.MemberCount members · @team.ProjectCount projects</span>
+            </div>
+        }
+    </div>
+    <div class="flex gap-2">
+        <button class="btn btn-primary" @onclick="ShowNewProjectModal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Project
+        </button>
+    </div>
+</div>
+
+@if (loading)
+{
+    <div class="loading-container">
+        <div class="spinner"></div>
+    </div>
+}
+else if (team == null)
+{
+    <div class="card">
+        <div class="empty-state">
+            <div class="empty-state-title">Team not found</div>
+            <a href="/teams" class="btn btn-primary mt-4">Back to Teams</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="team-grid">
+        <!-- Projects Section -->
+        <div>
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="card-title section-title">Projects</h3>
+                    <span class="badge badge-outline">@team.ProjectCount projects</span>
+                </div>
+                
+                @if (team.Projects.Any())
+                {
+                    <div class="project-list">
+                        @foreach (var project in team.Projects)
+                        {
+                            <div class="project-card" @onclick="() => NavigateToProject(project.Id)">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <h4 class="project-title">@project.Name</h4>
+                                        <code class="text-sm text-muted">@project.MockUrl</code>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="badge badge-sm @(project.IsActive ? "badge-success" : "badge-secondary")">
+                                            @(project.IsActive ? "Active" : "Inactive")
+                                        </span>
+                                        <span class="badge badge-sm badge-outline">@project.EndpointCount endpoint</span>
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(project.Description))
+                                {
+                                    <p class="text-muted text-sm mt-2 project-description">@project.Description</p>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state empty-state-padded">
+                        <div class="empty-state-title">No projects yet</div>
+                        <p>Start by adding a project to this team</p>
+                        <button class="btn btn-primary mt-4" @onclick="ShowNewProjectModal">Create Project</button>
+                    </div>
+                }
+            </div>
+        </div>
+        
+        <!-- Team Info & Members Section -->
+        <div>
+            <!-- Team Info (Read-only for non-admins) -->
+            <div class="card mb-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="card-title section-title">Team Information</h3>
+                    @if (canManageTeam)
+                    {
+                        <span class="badge badge-outline badge-sm">Editable</span>
+                    }
+                </div>
+                
+                @if (canManageTeam)
+                {
+                    <div class="form-group">
+                        <label class="form-label">Team Name</label>
+                        <input type="text" class="form-control" @bind="editModel.Name" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" @bind="editModel.Description" rows="2"></textarea>
+                    </div>
+                    
+                    <button class="btn btn-primary btn-block" @onclick="SaveTeam">Save</button>
+                }
+                else
+                {
+                    <div class="team-info-readonly">
+                        <div class="info-row">
+                            <span class="info-label">Team Name</span>
+                            <span class="info-value">@team?.Name</span>
+                        </div>
+                        @if (!string.IsNullOrEmpty(team?.Description))
+                        {
+                            <div class="info-row">
+                                <span class="info-label">Description</span>
+                                <span class="info-value">@team.Description</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            
+            <!-- Members -->
+            <div class="card">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="card-title section-title">Members</h3>
+                    @if (canManageTeam)
+                    {
+                        <button class="btn btn-sm btn-outline" @onclick="ShowAddMemberModal">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Add
+                        </button>
+                    }
+                </div>
+                
+                @if (members.Any())
+                {
+                    <div class="member-list">
+                        @foreach (var member in members)
+                        {
+                            <div class="member-item">
+                                <div class="member-avatar">
+                                    @member.UserName.Substring(0, 1).ToUpper()
+                                </div>
+                                <div class="member-info">
+                                    <div class="member-name">@member.UserName</div>
+                                    <div class="member-email">@member.UserEmail</div>
+                                </div>
+                                <span class="badge badge-sm @GetRoleBadgeClass(member.Role)">@member.Role</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted text-center">No members yet</p>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@if (showProjectModal)
+{
+    <div class="modal-backdrop" @onclick="CloseProjectModal">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3 class="modal-title">New Project</h3>
+                <button class="btn-icon" @onclick="CloseProjectModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Project Name *</label>
+                    <input type="text" class="form-control" @bind="projectModel.Name" placeholder="API Project" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" @bind="projectModel.Description" rows="2" placeholder="Project description..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" @onclick="CloseProjectModal">Cancel</button>
+                <button class="btn btn-primary" @onclick="CreateProject">Create</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showMemberModal)
+{
+    <div class="modal-backdrop" @onclick="CloseMemberModal">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3 class="modal-title">Add Member</h3>
+                <button class="btn-icon" @onclick="CloseMemberModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Select User *</label>
+                    @if (selectedUser != null)
+                    {
+                        <div class="selected-user-card">
+                            <div class="selected-user-avatar">
+                                @(selectedUser.FullName.Length > 0 ? selectedUser.FullName.Substring(0, 1).ToUpper() : "?")
+                            </div>
+                            <div class="selected-user-info">
+                                <div class="selected-user-name">@selectedUser.FullName</div>
+                                <div class="selected-user-email">@selectedUser.Email</div>
+                            </div>
+                            <button type="button" class="btn-clear-user" @onclick="ClearSelectedUser" title="Change">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"/>
+                                    <line x1="6" y1="6" x2="18" y2="18"/>
+                                </svg>
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        @if (showUserDropdown)
+                        {
+                            <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 9998; cursor: default; background: transparent;" @onclick="CloseUserDropdown" @onclick:stopPropagation="true"></div>
+                        }
+                        <div class="user-search-container" style="position: relative; z-index: 9999;">
+                            <div class="user-search-input-wrapper">
+                                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                </svg>
+                                <input type="text" class="form-control user-search-input" 
+                                       @bind="userSearchTerm" 
+                                       @bind:event="oninput"
+                                       @onclick="OpenUserDropdown"
+                                       @onfocusin="OpenUserDropdown"
+                                       placeholder="Search by name or email..." />
+                            </div>
+                            @if (showUserDropdown && (filteredUsers.Any() || !string.IsNullOrEmpty(userSearchTerm)))
+                            {
+                                <div class="user-search-dropdown">
+                                    @if (filteredUsers.Any())
+                                    {
+                                        @foreach (var user in filteredUsers)
+                                        {
+                                            <div class="user-dropdown-item" @onclick="() => SelectUser(user)">
+                                                <div class="user-dropdown-avatar">
+                                                    @(user.FullName.Length > 0 ? user.FullName.Substring(0, 1).ToUpper() : "?")
+                                                </div>
+                                                <div class="user-dropdown-info">
+                                                    <div class="user-dropdown-name">@user.FullName</div>
+                                                    <div class="user-dropdown-email">@user.Email</div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div class="user-dropdown-empty">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                                <circle cx="11" cy="11" r="8"/>
+                                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                                            </svg>
+                                            <span>User not found</span>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                        <small class="text-muted mt-1">Start typing or select from list</small>
+                    }
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role</label>
+                    <select class="form-control" @bind="memberModel.Role">
+                        <option value="@RoleConstants.Member">Member</option>
+                        <option value="@RoleConstants.Admin">Admin</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" @onclick="CloseMemberModal">Cancel</button>
+                <button class="btn btn-primary" @onclick="AddMember" disabled="@(selectedUser == null)">Add</button>
+            </div>
+        </div>
+    </div>
+}

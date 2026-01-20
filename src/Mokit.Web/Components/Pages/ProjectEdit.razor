@@ -1,0 +1,202 @@
+@page "/projects/new"
+@page "/projects/{ProjectId:guid}"
+@page "/projects/{ProjectId:guid}/edit"
+@rendermode InteractiveServer
+@using Mokit.Application.Interfaces
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>@(isNew ? "New Project" : project?.Name ?? "Project") - Mokit</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="flex items-center gap-2">
+            <a href="/projects" class="btn btn-sm btn-outline">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"/>
+                    <polyline points="12 19 5 12 12 5"/>
+                </svg>
+            </a>
+            <h1 class="page-title">@(isNew ? "New Project" : project?.Name)</h1>
+        </div>
+        @if (!isNew && project != null)
+        {
+            <div class="flex items-center gap-2 mt-1">
+                <code class="mock-url-code">@GetMockBaseUrl()</code>
+                <button class="btn btn-xs btn-outline" @onclick="CopyMockUrl" title="Copy URL">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                </button>
+            </div>
+        }
+    </div>
+    @if (!isNew)
+    {
+        <div class="flex gap-2">
+            <span class="badge badge-success">Active</span>
+        </div>
+    }
+</div>
+
+@if (loading)
+{
+    <div class="loading-container">
+        <div class="spinner"></div>
+    </div>
+}
+else
+{
+    <div class="project-grid">
+        <!-- Main Content -->
+        <div>
+            <!-- Project Settings Card -->
+            <div class="card mb-6">
+                <h3 class="card-title mb-4">Project Settings</h3>
+                
+                <div class="form-group">
+                    <label class="form-label">Project Name *</label>
+                    <input type="text" class="form-control" @bind="model.Name" placeholder="API Project" />
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" @bind="model.Description" rows="2" placeholder="Project description..."></textarea>
+                </div>
+
+                <div class="flex gap-4 mt-4">
+                    <label class="checkbox-label">
+                        <input type="checkbox" @bind="model.EnableCors" />
+                        <span>Enable CORS</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" @bind="model.EnableLogging" />
+                        <span>Request Logging</span>
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <div class="flex gap-2">
+                        @if (!isNew && canDeleteProject)
+                        {
+                            <button type="button" class="btn btn-danger" @onclick="PromptDeleteProject">Delete</button>
+                        }
+                    </div>
+                    <button type="button" class="btn btn-primary" @onclick="SaveProject" disabled="@saving">
+                        @if (saving)
+                        {
+                            <div class="spinner spinner-sm"></div>
+                            <span>Saving...</span>
+                        }
+                        else
+                        {
+                            <span>@(isNew ? "Create" : "Save")</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            @if (!isNew)
+            {
+                <!-- Endpoints Card -->
+                <div class="card mt-6">
+                    <div class="card-header">
+                        <h3 class="card-title">Endpoints</h3>
+                        <button class="btn btn-sm btn-primary" @onclick="AddEndpoint">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Add Endpoint
+                        </button>
+                    </div>
+
+                    @if (endpoints.Count == 0)
+                    {
+                        <div class="empty-state empty-state-padding">
+                            <div class="empty-state-title">No endpoints yet</div>
+                            <p class="text-muted">Add your first endpoint</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <EndpointList Endpoints="@endpoints" 
+                                      OnEdit="EditEndpoint" 
+                                      OnDelete="PromptDeleteEndpoint" />
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Sidebar -->
+        <div>
+            @if (!isNew && project != null)
+            {
+                <div class="card mb-4">
+                    <h4 class="sidebar-section-title">Mock API URL</h4>
+                    <div class="active-indicator">
+                        <span class="active-dot"></span>
+                        <span class="text-sm">Active</span>
+                    </div>
+                    <code class="mock-url-code">
+                        @project.MockUrl
+                    </code>
+                    <p class="text-xs text-muted mt-2">All endpoints are accessible under this path</p>
+                </div>
+            }
+
+            <div class="card mb-4">
+                <h4 class="sidebar-section-title">Quick Info</h4>
+                <div class="info-grid">
+                    <div class="flex justify-between">
+                        <span class="text-muted">Endpoint Count</span>
+                        <span>@endpoints.Count</span>
+                    </div>
+                    @if (!isNew)
+                    {
+                        <div class="flex justify-between">
+                            <span class="text-muted">Created</span>
+                            <span>@project?.CreatedAt.ToString("dd MMM yyyy")</span>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Dynamic Variables Help -->
+            <div class="card">
+                <h4 class="sidebar-section-title">Dynamic Variables</h4>
+                <div class="variable-list">
+                    <code class="variable-hint">{{faker.name.fullName}}</code>
+                    <code class="variable-hint">{{faker.internet.email}}</code>
+                    <code class="variable-hint">{{faker.random.uuid}}</code>
+                    <code class="variable-hint">{{faker.random.number}}</code>
+                    <code class="variable-hint">{{faker.date.recent}}</code>
+                    <code class="variable-hint">{{request.params.id}}</code>
+                    <code class="variable-hint">{{request.query.page}}</code>
+                </div>
+                <a href="/variables" class="btn btn-sm btn-outline full-width-btn">
+                    All Variables
+                </a>
+            </div>
+        </div>
+    </div>
+}
+
+@* Endpoint Modal *@
+@if (showEndpointModal)
+{
+    <EndpointModal ProjectId="@ProjectId" 
+                   Endpoint="@editingEndpoint" 
+                   OnSaved="OnEndpointSaved" 
+                   OnCancel="CloseEndpointModal" 
+                   EnableCors="@model.EnableCors" />
+}
+
+<Mokit.Web.Components.Shared.ConfirmationModal 
+    IsVisible="@showConfirmation" 
+    Title="@confirmationTitle" 
+    Message="@confirmationMessage" 
+    OnConfirm="ConfirmAction" 
+    OnCancel="CancelConfirmation" />

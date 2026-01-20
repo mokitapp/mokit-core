@@ -1,0 +1,31 @@
+.endpoint-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.endpoint-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem;
+    background: var(--bg-darker);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.endpoint-item:hover {
+    background: var(--bg-card);
+    border-color: var(--primary-color);
+}
+
+.status-badge {
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+}

@@ -1,0 +1,161 @@
+@page "/servers"
+@rendermode InteractiveServer
+@using Mokit.Application.Interfaces
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+@inject IMockProjectService ProjectService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Mock API Status - Mokit</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Mock API Status</h1>
+        <p class="page-description">View your active mock endpoints</p>
+    </div>
+</div>
+
+@if (loading)
+{
+    <div class="flex items-center justify-center" style="padding: 3rem;">
+        <div class="spinner"></div>
+    </div>
+}
+else if (projects.Count == 0)
+{
+    <div class="card">
+        <div class="empty-state">
+            <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <div class="empty-state-title">No projects yet</div>
+            <p class="text-muted">Start by creating your Mock API project</p>
+            <a href="/projects/new" class="btn btn-primary mt-4">Create Project</a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="info-banner mb-4">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <div>
+            <strong>Mock APIs are always active!</strong>
+            <p class="text-sm" style="margin: 0;">No need to start a separate server. All your mock endpoints are automatically served.</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1">
+        @foreach (var project in projects.Where(p => p.IsActive))
+        {
+            <div class="card mb-3">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="status-indicator active"></div>
+                        <div>
+                            <h4 style="margin: 0;">@project.Name</h4>
+                            <code class="text-sm">@project.MockUrl</code>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="badge badge-success">Active</span>
+                        <span class="badge badge-outline">@project.EndpointCount endpoints</span>
+                        <a href="/projects/@project.Id" class="btn btn-sm btn-outline">Edit</a>
+                    </div>
+                </div>
+                
+                @if (!string.IsNullOrEmpty(project.Description))
+                {
+                    <p class="text-muted text-sm" style="margin: 0;">@project.Description</p>
+                }
+            </div>
+        }
+    </div>
+    
+    @if (projects.Any(p => !p.IsActive))
+    {
+        <h3 class="mt-6 mb-3" style="color: var(--text-muted); font-size: 0.875rem;">Inactive Projects</h3>
+        
+        @foreach (var project in projects.Where(p => !p.IsActive))
+        {
+            <div class="card mb-3" style="opacity: 0.6;">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="status-indicator inactive"></div>
+                        <div>
+                            <h4 style="margin: 0;">@project.Name</h4>
+                            <code class="text-sm">@project.MockUrl</code>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="badge badge-secondary">Inactive</span>
+                        <a href="/projects/@project.Id" class="btn btn-sm btn-outline">Edit</a>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+}
+
+<style>
+    .info-banner {
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 8px;
+        padding: 1rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .info-banner svg {
+        color: #3b82f6;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+    
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+    
+    .status-indicator.active {
+        background: #10b981;
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+    }
+    
+    .status-indicator.inactive {
+        background: #6b7280;
+    }
+</style>
+
+@code {
+    private List<MockProjectDto> projects = new();
+    private bool loading = true;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var result = await ProjectService.GetAllAsync(userId);
+            if (result.IsSuccess)
+            {
+                projects = result.Data ?? new List<MockProjectDto>();
+            }
+        }
+        
+        loading = false;
+    }
+}

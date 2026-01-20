@@ -1,0 +1,309 @@
+@page "/"
+@using Mokit.Application.Interfaces
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IMockProjectService ProjectService
+@inject ITeamService TeamService
+@inject IUserService UserService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Dashboard - Mokit</PageTitle>
+
+<AuthorizeView>
+    <NotAuthorized>
+        <!-- Landing Page for Guests -->
+        <div class="landing-container">
+            <div class="landing-hero">
+                <div class="landing-logo">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5"/>
+                        <path d="M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <h1 class="landing-title">Welcome to Mokit</h1>
+                <p class="landing-subtitle">A powerful Mock API platform for teams and individuals. Web-based mock server management for Kubernetes and similar environments.</p>
+                <div class="landing-buttons">
+                    <a href="Account/Login" class="btn btn-primary btn-lg">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
+                            <polyline points="10 17 15 12 10 7"/>
+                            <line x1="15" y1="12" x2="3" y2="12"/>
+                        </svg>
+                        Sign In
+                    </a>
+                </div>
+            </div>
+
+            <div class="landing-features">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: rgba(99, 102, 241, 0.2);">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 010 7.75"/>
+                        </svg>
+                    </div>
+                    <h3>Team Support</h3>
+                    <p>Create and manage private mock APIs for your teams</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: rgba(16, 185, 129, 0.2);">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                    </div>
+                    <h3>Path Routing</h3>
+                    <p>Isolated mock servers with path-based routing</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: rgba(245, 158, 11, 0.2);">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
+                            <polyline points="16 18 22 12 16 6"/>
+                            <polyline points="8 6 2 12 8 18"/>
+                        </svg>
+                    </div>
+                    <h3>Dynamic Variables</h3>
+                    <p>Random data, template variables and more</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: rgba(59, 130, 246, 0.2);">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0110 0v4"/>
+                        </svg>
+                    </div>
+                    <h3>JWT Simulation</h3>
+                    <p>Token-based authentication testing</p>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .landing-container {
+                padding: 3rem 2rem;
+                max-width: 1200px;
+                margin: 0 auto;
+            }
+
+            .landing-hero {
+                text-align: center;
+                padding: 3rem 0 4rem;
+            }
+
+            .landing-logo {
+                margin-bottom: 2rem;
+            }
+
+            .landing-title {
+                font-size: 3rem;
+                font-weight: 800;
+                background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                margin-bottom: 1rem;
+            }
+
+            .landing-subtitle {
+                font-size: 1.25rem;
+                color: var(--text-muted);
+                max-width: 600px;
+                margin: 0 auto 2rem;
+                line-height: 1.7;
+            }
+
+            .landing-buttons {
+                display: flex;
+                gap: 1rem;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .btn-lg {
+                padding: 1rem 2rem;
+                font-size: 1rem;
+                gap: 0.75rem;
+            }
+
+            .landing-features {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 1.5rem;
+                margin-top: 2rem;
+            }
+
+            .feature-card {
+                background: var(--card-bg);
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                padding: 1.5rem;
+                text-align: center;
+            }
+
+            .feature-icon {
+                width: 60px;
+                height: 60px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 1rem;
+            }
+
+            .feature-card h3 {
+                font-size: 1.1rem;
+                margin-bottom: 0.5rem;
+            }
+
+            .feature-card p {
+                color: var(--text-muted);
+                font-size: 0.9rem;
+                margin: 0;
+            }
+        </style>
+    </NotAuthorized>
+
+    <Authorized>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-description">Manage and monitor your Mock API servers</p>
+    </div>
+    <a href="projects/new" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        New Project
+    </a>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-4 mb-6">
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background: rgba(99, 102, 241, 0.2);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2">
+                <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+            </svg>
+        </div>
+        <div class="stat-card-value">@totalProjects</div>
+        <div class="stat-card-label">Total Projects</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background: rgba(16, 185, 129, 0.2);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+                <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+            </svg>
+        </div>
+        <div class="stat-card-value">@totalTeams</div>
+        <div class="stat-card-label">Teams</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon" style="background: rgba(59, 130, 246, 0.2);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+            </svg>
+        </div>
+        <div class="stat-card-value">@totalEndpoints</div>
+        <div class="stat-card-label">Endpoints</div>
+    </div>
+</div>
+
+<!-- Info Banner -->
+<div class="info-banner mb-6">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+    </svg>
+    <div>
+        <strong>Mock APIs are always active!</strong>
+        <span class="text-muted">All your endpoints are automatically served. No need to start a separate server.</span>
+    </div>
+</div>
+
+
+<!-- Quick Actions -->
+<div class="grid grid-cols-3">
+    <a href="projects/new" class="card" style="text-decoration: none; transition: transform 0.2s, border-color 0.2s;" 
+       onmouseover="this.style.borderColor='var(--primary-color)';this.style.transform='translateY(-2px)'"
+       onmouseout="this.style.borderColor='var(--border-color)';this.style.transform='translateY(0)'">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" style="margin-bottom: 1rem;">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <h4 style="margin-bottom: 0.5rem;">Create New Project</h4>
+        <p class="text-muted text-sm" style="margin: 0;">Quickly create your Mock API project</p>
+    </a>
+    <a href="import-export" class="card" style="text-decoration: none; transition: transform 0.2s, border-color 0.2s;"
+       onmouseover="this.style.borderColor='var(--primary-color)';this.style.transform='translateY(-2px)'"
+       onmouseout="this.style.borderColor='var(--border-color)';this.style.transform='translateY(0)'">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" style="margin-bottom: 1rem;">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        <h4 style="margin-bottom: 0.5rem;">Import Postman/OpenAPI</h4>
+        <p class="text-muted text-sm" style="margin: 0;">Import your existing collections</p>
+    </a>
+    <a href="variables" class="card" style="text-decoration: none; transition: transform 0.2s, border-color 0.2s;"
+       onmouseover="this.style.borderColor='var(--primary-color)';this.style.transform='translateY(-2px)'"
+       onmouseout="this.style.borderColor='var(--border-color)';this.style.transform='translateY(0)'">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" style="margin-bottom: 1rem;">
+            <polyline points="16 18 22 12 16 6"/>
+            <polyline points="8 6 2 12 8 18"/>
+        </svg>
+        <h4 style="margin-bottom: 0.5rem;">Dynamic Variables</h4>
+        <p class="text-muted text-sm" style="margin: 0;">Random data and template variables</p>
+    </a>
+</div>
+
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private int totalProjects = 0;
+    private int totalTeams = 0;
+    private int totalEndpoints = 0;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if setup is required (no admin exists)
+        if (await UserService.IsSetupRequiredAsync())
+        {
+            Navigation.NavigateTo("/Setup");
+            return;
+        }
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var projectsResult = await ProjectService.GetAllAsync(userId);
+                if (projectsResult.IsSuccess && projectsResult.Data != null)
+                {
+                    totalProjects = projectsResult.Data.Count;
+                    totalEndpoints = projectsResult.Data.Sum(p => p.EndpointCount);
+                }
+                
+                var teamsResult = await TeamService.GetUserTeamsAsync(userId);
+                if (teamsResult.IsSuccess && teamsResult.Data != null)
+                {
+                    totalTeams = teamsResult.Data.Count;
+                }
+            }
+        }
+    }
+}

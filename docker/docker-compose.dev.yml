@@ -1,0 +1,22 @@
+version: '3.8'
+
+# Development compose file - extends base docker-compose.yml
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  mockhub:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+    ports:
+      - "5000:5000"
+      - "5100-5300:5100-5300"
+    volumes:
+      - mockhub-data:/app/data
+      # Mount source for hot reload (optional)
+      # - ../src:/src:ro
+
+

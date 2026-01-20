@@ -1,0 +1,239 @@
+@using Mokit.Web.Services
+@inject IToastService ToastService
+@implements IDisposable
+
+<div class="toast-container">
+    @foreach (var toast in toasts)
+    {
+        <div class="toast-message toast-@toast.Level.ToString().ToLower() @(toast.Id == toastToRemove ? "toast-hiding" : "")">
+            <div class="toast-icon">
+                @GetIcon(toast.Level)
+            </div>
+            <div class="toast-content">
+                @if (!string.IsNullOrEmpty(toast.Title))
+                {
+                    <div class="toast-title">@toast.Title</div>
+                }
+                <div class="toast-text">@toast.Message</div>
+            </div>
+            <button class="toast-close" @onclick="() => RemoveToast(toast.Id)">×</button>
+        </div>
+    }
+</div>
+
+<style>
+    .toast-container {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        max-width: 400px;
+        width: 100%;
+        pointer-events: none;
+    }
+
+    .toast-message {
+        pointer-events: auto;
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        animation: slideIn 0.3s ease forwards;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .toast-message.toast-hiding {
+        animation: fadeOut 0.3s ease forwards;
+    }
+
+    .toast-success { border-left: 4px solid var(--success-color); }
+    .toast-error { border-left: 4px solid var(--danger-color); }
+    .toast-info { border-left: 4px solid var(--primary-color); }
+    .toast-warning { border-left: 4px solid var(--warning-color); }
+
+    .toast-icon {
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .toast-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .toast-title {
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+        color: var(--text-color);
+    }
+
+    .toast-text {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        word-wrap: break-word;
+    }
+
+    .toast-close {
+        background: none;
+        border: none;
+        color: var(--text-muted);
+        font-size: 1.25rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+        margin-top: -2px;
+        opacity: 0.6;
+        transition: opacity 0.2s;
+    }
+
+    .toast-close:hover {
+        opacity: 1;
+    }
+
+    @@keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @@keyframes fadeOut {
+        from { opacity: 1; transform: translateX(0); }
+        to { opacity: 0; transform: translateX(100%); }
+    }
+</style>
+
+@code {
+    private List<ToastMessage> toasts = new();
+    private Guid? toastToRemove;
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnShow += ShowToast;
+    }
+
+    private void ShowToast(ToastMessage toast)
+    {
+        toasts.Add(toast);
+        StateHasChanged();
+
+        // Auto remove after 5 seconds
+        _ = Task.Delay(5000).ContinueWith(_ => 
+        {
+            RemoveToast(toast.Id);
+        }, TaskScheduler.Default);
+    }
+
+    private void RemoveToast(Guid id)
+    {
+        InvokeAsync(async () =>
+        {
+            toastToRemove = id;
+            StateHasChanged();
+            await Task.Delay(300); // Wait for animation
+            toasts.RemoveAll(x => x.Id == id);
+            toastToRemove = null;
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        ToastService.OnShow -= ShowToast;
+    }
+
+    private RenderFragment GetIcon(ToastLevel level) => builder =>
+    {
+        builder.OpenElement(0, "svg");
+        builder.AddAttribute(1, "width", "20");
+        builder.AddAttribute(2, "height", "20");
+        builder.AddAttribute(3, "viewBox", "0 0 24 24");
+        builder.AddAttribute(4, "fill", "none");
+        builder.AddAttribute(5, "stroke", "currentColor");
+        builder.AddAttribute(6, "stroke-width", "2");
+        
+        var color = level switch
+        {
+            ToastLevel.Success => "var(--success-color)",
+            ToastLevel.Error => "var(--danger-color)",
+            ToastLevel.Warning => "var(--warning-color)",
+            _ => "var(--primary-color)"
+        };
+        
+        builder.AddAttribute(7, "style", $"color: {color}");
+
+        if (level == ToastLevel.Success)
+        {
+            builder.OpenElement(8, "polyline");
+            builder.AddAttribute(9, "points", "20 6 9 17 4 12");
+            builder.CloseElement();
+        }
+        else if (level == ToastLevel.Error)
+        {
+            builder.OpenElement(8, "circle");
+            builder.AddAttribute(9, "cx", "12");
+            builder.AddAttribute(10, "cy", "12");
+            builder.AddAttribute(11, "r", "10");
+            builder.CloseElement();
+            builder.OpenElement(12, "line");
+            builder.AddAttribute(13, "x1", "15");
+            builder.AddAttribute(14, "y1", "9");
+            builder.AddAttribute(15, "x2", "9");
+            builder.AddAttribute(16, "y2", "15");
+            builder.CloseElement();
+            builder.OpenElement(17, "line");
+            builder.AddAttribute(18, "x1", "9");
+            builder.AddAttribute(19, "y1", "9");
+            builder.AddAttribute(20, "x2", "15");
+            builder.AddAttribute(21, "y2", "15");
+            builder.CloseElement();
+        }
+        else if (level == ToastLevel.Warning)
+        {
+            builder.OpenElement(8, "path");
+            builder.AddAttribute(9, "d", "M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z");
+            builder.CloseElement();
+            builder.OpenElement(10, "line");
+            builder.AddAttribute(11, "x1", "12");
+            builder.AddAttribute(12, "y1", "9");
+            builder.AddAttribute(13, "x2", "12");
+            builder.AddAttribute(14, "y2", "13");
+            builder.CloseElement();
+            builder.OpenElement(15, "line");
+            builder.AddAttribute(16, "x1", "12");
+            builder.AddAttribute(17, "y1", "17");
+            builder.AddAttribute(18, "x2", "12.01");
+            builder.AddAttribute(19, "y2", "17");
+            builder.CloseElement();
+        }
+        else
+        {
+            builder.OpenElement(8, "circle");
+            builder.AddAttribute(9, "cx", "12");
+            builder.AddAttribute(10, "cy", "12");
+            builder.AddAttribute(11, "r", "10");
+            builder.CloseElement();
+            builder.OpenElement(12, "line");
+            builder.AddAttribute(13, "x1", "12");
+            builder.AddAttribute(14, "y1", "16");
+            builder.AddAttribute(15, "x2", "12");
+            builder.AddAttribute(16, "y2", "12");
+            builder.CloseElement();
+            builder.OpenElement(17, "line");
+            builder.AddAttribute(18, "x1", "12");
+            builder.AddAttribute(19, "y1", "8");
+            builder.AddAttribute(20, "x2", "12.01");
+            builder.AddAttribute(21, "y2", "8");
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+    };
+}

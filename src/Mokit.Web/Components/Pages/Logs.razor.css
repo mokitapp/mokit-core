@@ -1,0 +1,139 @@
+.log-row {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.log-row:hover {
+    background: var(--hover-bg);
+}
+
+.error-row {
+    background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.error-row:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+}
+
+.modal-lg {
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.log-detail-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    padding: 1.25rem;
+    background: var(--hover-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.summary-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+.summary-value {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.log-detail-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border-color);
+    padding: 0 1.25rem;
+}
+
+.tab-btn {
+    padding: 0.875rem 1.25rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+}
+
+.tab-btn:hover {
+    color: var(--text-color);
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.log-detail-content {
+    padding: 1.25rem;
+}
+
+.detail-section {
+    margin-bottom: 1.5rem;
+}
+
+.detail-section:last-child {
+    margin-bottom: 0;
+}
+
+.detail-section h4 {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 0 0 0.5rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.detail-code {
+    display: block;
+    padding: 0.75rem 1rem;
+    background: var(--hover-bg);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    word-break: break-all;
+}
+
+.detail-pre {
+    margin: 0;
+    padding: 1rem;
+    background: var(--hover-bg);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.error-text {
+    color: #f87171;
+}
+
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

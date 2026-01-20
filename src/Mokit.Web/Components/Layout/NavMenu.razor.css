@@ -1,0 +1,114 @@
+.nav-menu {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 0;
+    overflow-y: auto;
+}
+
+.nav-section {
+    padding: 0.5rem 1rem;
+}
+
+.nav-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    padding: 0.5rem 0.75rem;
+    display: block;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.nav-link:hover {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--text-primary);
+}
+
+.nav-link.active {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
+    color: var(--primary-color);
+}
+
+.nav-link.active svg {
+    color: var(--primary-color);
+}
+
+.nav-link svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+}
+
+.nav-link:hover svg {
+    opacity: 1;
+}
+
+.nav-section-bottom {
+    margin-top: auto;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+
+.nav-user-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.nav-user-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    margin-bottom: 0.5rem;
+}
+
+.nav-user-info svg {
+    opacity: 0.7;
+}
+
+.nav-link-logout {
+    color: #ef4444 !important;
+}
+
+.nav-link-logout:hover {
+    background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.nav-menu-guest {
+    padding-top: 2rem;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+:root {
+    --text-muted: #64748b;
+    --text-secondary: #94a3b8;
+    --text-primary: #f1f5f9;
+    --primary-color: #6366f1;
+    --border-color: #334155;
+}

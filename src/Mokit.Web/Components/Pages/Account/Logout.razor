@@ -1,0 +1,16 @@
+@page "/Account/Logout"
+@using Microsoft.AspNetCore.Identity
+@using Mokit.Domain.Entities
+@inject SignInManager<ApplicationUser> SignInManager
+@inject NavigationManager Navigation
+@inject ILogger<Logout> Logger
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await SignInManager.SignOutAsync();
+        Logger.LogInformation("Kullanıcı çıkış yaptı.");
+        Navigation.NavigateTo("/", forceLoad: true);
+    }
+}
+

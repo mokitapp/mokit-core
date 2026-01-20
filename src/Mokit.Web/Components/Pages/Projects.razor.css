@@ -1,0 +1,52 @@
+.project-card {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.project-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.project-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.personal-project {
+    background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+}
+
+.team-project {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.mock-url-small {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--hover-bg);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.project-footer {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.endpoint-count {
+    background: var(--hover-bg);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.team-badge,
+.personal-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}

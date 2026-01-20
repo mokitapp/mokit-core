@@ -1,0 +1,209 @@
+@page "/Account/Login"
+@using Mokit.Application.Interfaces
+@inject IUserService UserService
+@inject NavigationManager Navigation
+
+<PageTitle>Sign In - Mokit</PageTitle>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5"/>
+                    <path d="M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+            <h1 class="auth-title">Welcome to Mokit</h1>
+            <p class="auth-subtitle">Sign in to your account</p>
+        </div>
+
+        <form method="post" action="/api/account/login">
+            <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+            
+            @if (!string.IsNullOrEmpty(Error))
+            {
+                <div class="alert alert-danger">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="15" y1="9" x2="9" y2="15"/>
+                        <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                    @Error
+                </div>
+            }
+
+            <div class="form-group">
+                <label for="email" class="form-label">Email</label>
+                <input type="email" name="Email" id="email" class="form-control" placeholder="example@email.com" autocomplete="email" required />
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" name="Password" id="password" class="form-control" placeholder="••••••••" autocomplete="current-password" required />
+            </div>
+
+            <div class="form-group">
+                <label class="form-check">
+                    <input type="checkbox" name="RememberMe" value="true" class="form-check-input" />
+                    <span class="form-check-label">Remember me</span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block">
+                Sign In
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p class="text-muted">Contact the administrator to create an account.</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .auth-container {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0f0f23 100%);
+    }
+
+    .auth-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2.5rem;
+        width: 100%;
+        max-width: 420px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .auth-logo {
+        margin-bottom: 1.5rem;
+    }
+
+    .auth-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-color);
+        margin: 0 0 0.5rem;
+    }
+
+    .auth-subtitle {
+        color: var(--text-muted);
+        margin: 0;
+    }
+
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 0.9375rem;
+        background: var(--input-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--text-color);
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+
+    .form-control::placeholder {
+        color: var(--text-muted);
+    }
+
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+
+    .form-check-input {
+        width: 1rem;
+        height: 1rem;
+        accent-color: var(--primary-color);
+    }
+
+    .form-check-label {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+    }
+
+    .btn-block {
+        width: 100%;
+        padding: 0.875rem;
+        font-size: 1rem;
+        margin-top: 0.5rem;
+    }
+
+    .auth-footer {
+        text-align: center;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .auth-footer p {
+        color: var(--text-muted);
+        margin: 0;
+        font-size: 0.875rem;
+    }
+
+    .alert {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.875rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.25rem;
+        font-size: 0.875rem;
+    }
+
+    .alert-danger {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #f87171;
+    }
+</style>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Redirect to setup if no admin exists
+        if (await UserService.IsSetupRequiredAsync())
+        {
+            Navigation.NavigateTo("/Setup");
+        }
+    }
+}

@@ -1,0 +1,108 @@
+@page "/variables"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<PageTitle>Dynamic Variables - Mokit</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Dynamic Variables</h1>
+        <p class="page-description">All variables you can use in response body</p>
+    </div>
+</div>
+
+<div class="variables-container">
+    <!-- Search -->
+    <div class="search-box">
+        <input type="text" class="form-control" placeholder="Search variables..." @bind="searchTerm" @bind:event="oninput" />
+    </div>
+
+    <!-- Variable Categories -->
+    <div class="categories-grid">
+        @foreach (var category in GetFilteredCategories())
+        {
+            <div class="category-card">
+                <div class="category-header">
+                    <span class="category-icon">@category.Icon</span>
+                    <h3 class="category-title">@category.Name</h3>
+                </div>
+                <p class="category-description">@category.Description</p>
+                
+                <div class="variables-list">
+                    @foreach (var variable in category.Variables)
+                    {
+                        <div class="variable-item" @onclick="() => CopyToClipboard(variable.Syntax)">
+                            <div class="variable-info">
+                                <code class="variable-syntax">@variable.Syntax</code>
+                                <span class="variable-description">@variable.Description</span>
+                            </div>
+                            <div class="variable-example">
+                                <span class="example-label">Example:</span>
+                                <span class="example-value">@variable.Example</span>
+                            </div>
+                            <button class="copy-btn" title="Copy">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                                </svg>
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Usage Examples -->
+    <div class="card mt-6">
+        <h3 class="card-title">Usage Examples</h3>
+        
+        <div class="example-section">
+            <h4>Simple JSON Response</h4>
+            <pre class="code-block"><code>{
+  "id": "{{faker.random.uuid}}",
+  "name": "{{faker.name.fullName}}",
+  "email": "{{faker.internet.email}}",
+  "phone": "{{faker.phone.number}}",
+  "createdAt": "{{now}}"
+}</code></pre>
+        </div>
+
+        <div class="example-section">
+            <h4>URL Parameter Usage</h4>
+            <pre class="code-block"><code>{
+  "message": "User {{request.params.id}} not found",
+  "requestedId": "{{request.params.id}}",
+  "timestamp": "{{now}}"
+}</code></pre>
+        </div>
+
+        <div class="example-section">
+            <h4>Query String Usage</h4>
+            <pre class="code-block"><code>{
+  "page": {{request.query.page | default: 1}},
+  "limit": {{request.query.limit | default: 10}},
+  "data": []
+}</code></pre>
+        </div>
+
+        <div class="example-section">
+            <h4>Conditional Content</h4>
+            <pre class="code-block"><code>{
+  "status": "{{ if request.query.success }}success{{ else }}error{{ end }}",
+  "items": [
+    {{ for i in 1..5 }}
+    {
+      "id": {{ for.index }},
+      "name": "{{ faker.commerce.product_name }}",
+      "price": {{ faker.commerce.price }}
+    }{{ if !for.last }},{{ end }}
+    {{ end }}
+  ]
+}</code></pre>
+        </div>
+    </div>
+</div>
+
+

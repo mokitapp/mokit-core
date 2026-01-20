@@ -1,0 +1,128 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<div id="@EditorId" class="monaco-editor-container" style="height: @Height;"></div>
+
+@code {
+    [Parameter] public string Value { get; set; } = "{}";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Language { get; set; } = "json";
+    [Parameter] public string Height { get; set; } = "300px";
+    [Parameter] public bool ReadOnly { get; set; } = false;
+
+    private string EditorId = $"monaco-{Guid.NewGuid():N}";
+    private DotNetObjectReference<MonacoEditor>? _dotNetHelper;
+    private bool _initialized = false;
+    private string _lastValue = "";
+    private string _lastLanguage = "json";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetHelper = DotNetObjectReference.Create(this);
+            _lastValue = Value ?? "{}";
+            _lastLanguage = Language;
+            
+            var success = await JSRuntime.InvokeAsync<bool>("MonacoInterop.initialize", EditorId, new
+            {
+                value = Value ?? "{}",
+                language = Language,
+                readOnly = ReadOnly
+            });
+
+            if (success)
+            {
+                _initialized = true;
+                await JSRuntime.InvokeVoidAsync("MonacoInterop.onContentChanged", EditorId, _dotNetHelper);
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_initialized)
+        {
+            // Update value if changed
+            if (Value != _lastValue)
+            {
+                _lastValue = Value ?? "{}";
+                await JSRuntime.InvokeVoidAsync("MonacoInterop.setValue", EditorId, Value);
+            }
+            
+            // Update language if changed
+            if (Language != _lastLanguage)
+            {
+                _lastLanguage = Language;
+                await JSRuntime.InvokeVoidAsync("MonacoInterop.setLanguage", EditorId, Language);
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnContentChanged(string value)
+    {
+        if (value != _lastValue)
+        {
+            _lastValue = value;
+            await ValueChanged.InvokeAsync(value);
+        }
+    }
+
+    public async Task<string> GetValue()
+    {
+        if (_initialized)
+        {
+            return await JSRuntime.InvokeAsync<string>("MonacoInterop.getValue", EditorId);
+        }
+        return Value ?? "{}";
+    }
+
+    public async Task SetValue(string value)
+    {
+        if (_initialized)
+        {
+            _lastValue = value;
+            await JSRuntime.InvokeVoidAsync("MonacoInterop.setValue", EditorId, value);
+        }
+    }
+
+    public async Task FormatDocument()
+    {
+        if (_initialized)
+        {
+            await JSRuntime.InvokeVoidAsync("MonacoInterop.formatDocument", EditorId, _lastLanguage);
+        }
+    }
+
+    public async Task InsertText(string text)
+    {
+        if (_initialized)
+        {
+            await JSRuntime.InvokeVoidAsync("MonacoInterop.insertText", EditorId, text);
+        }
+    }
+
+    public async Task SetLanguage(string language)
+    {
+        if (_initialized)
+        {
+            await JSRuntime.InvokeVoidAsync("MonacoInterop.setLanguage", EditorId, language);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_initialized)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("MonacoInterop.dispose", EditorId);
+            }
+            catch { }
+        }
+        _dotNetHelper?.Dispose();
+    }
+}
+
