@@ -40,8 +40,6 @@
 
 3. Open: Navigate to `http://localhost:5268`
 
-4. Login: See [docs/credentials.md](docs/credentials.md) for default credentials.
-
 ---
 
 ## Contributing
