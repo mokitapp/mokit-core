@@ -25,8 +25,8 @@
 
 1. Clone the repo:
    ```bash
-   git clone https://github.com/aligoren/mokit.git
-   cd mokit
+   git clone https://github.com/mokitapp/mokit-core.git
+   cd mokit-core
    ```
 
 2. Run:

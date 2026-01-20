@@ -13,8 +13,8 @@ This document explains how to set up your environment and contribute to Mokit.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/aligoren/Mokit.git
-   cd Mokit
+   git clone https://github.com/mokitapp/mokit-core.git
+   cd mokit-core
    ```
 
 2. Restore dependencies:
