@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/images/brand.png" alt="Mokit Logo" width="400">
+</p>
+
 # Mokit
 
 **Mokit** is a production-grade mock API management platform designed to accelerate development workflows. Decouple your frontend and backend teams by simulating complex API behaviors, latencies, and data structures with ease.
